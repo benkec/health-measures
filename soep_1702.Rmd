@@ -1,0 +1,988 @@
+---
+title: "soep"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+library(haven)
+library(dplyr)
+library(utils)
+library(stringr)
+library(ggplot2)
+library(plyr)
+library(ggpubr)
+library(psych)
+library(crayon)
+library(NLP)
+library(jtools)
+library(kableExtra)
+library(interactions)
+library(lme4)
+library(Publish)
+library(data.table)
+library(tidyverse)
+library(stargazer)
+#install.packages("multilevelTools")
+#install.packages("stringr")
+library(stringr)
+library(lmerTest)
+library(sjPlot)
+
+```
+
+
+```{r}
+install.packages("http://companion.soep.de/SOEPhelpR/SOEPhelp_0.1.2.tar.gz",
+                 repos = NULL, type = 'source', quiet = TRUE)
+
+
+library(SOEPhelp)
+?SOEPhelp
+```
+
+```{r}
+
+#data <- read_dta("/Volumes/My Passport/DUMMY_soep_cov_20210114.dta")
+data <- read_dta("G:/DUMMY_soep_cov_20210114.dta")
+#view(data)
+
+
+
+```
+
+
+```{r}
+
+View(data)
+
+```
+
+```{r}
+
+
+data$pdatt2 <- ifelse(data$ptagin < 10, str_c(0, data$ptagin), data$ptagin)
+data$pdatm2 <- ifelse(data$pmonin < 10, str_c(0, data$pmonin), data$pmonin)
+data$date <- str_c(data$pdatm2, data$pdatt2, data$syear)
+data$date <- as.Date(data$date, format = "%m %d %y")
+range(data$date, na.rm = T)
+
+data$week <- strftime(data$date, format = "%V")
+range(data$week,na.rm = T)
+
+```
+
+```{r}
+
+data_lock <- read_csv("G:/ZPID lockdown measures dataset 4.0.csv")
+
+
+
+
+```
+```{r}
+
+view(data_lock)
+
+
+
+```
+
+
+```{r}
+
+
+#data_lock_long<-reshape(data=data_lock, varying = 4:271, v.names="Maßnahme", timevar="Datum", idvar=c("stateID", "Measure"), #direction="long")
+```
+
+
+```{r}
+
+data_lock <- data_lock %>%mutate(stateID_new=case_when(
+                                                   (stateID == 1) ~ 8,#bwu
+                                                   (stateID == 2) ~ 9,#bayern
+                                                  (stateID == 3) ~ 11,#berl
+                                                    (stateID == 4) ~ 12,#branden
+                                                  (stateID == 5) ~ 4,#bremen
+                                                    (stateID == 6) ~ 2,#hamburg
+                                                   (stateID == 7) ~ 6,#hess
+                                                        (stateID == 8) ~ 13,#MV
+                                                   (stateID == 9) ~ 3,#nieder
+                                                    (stateID == 10) ~ 5,#nrw
+                                                   (stateID == 11) ~ 7,#rheinland
+                                                   (stateID == 12) ~ 10,#saarland
+                                                   (stateID == 13) ~ 14,#sachsen
+                                                   (stateID == 14) ~ 15,#SachsenAnhal
+                                                     (stateID == 15) ~ 1,#schleswig
+                                                   (stateID == 16) ~ 16)) #thü
+
+stay_at_home<-data_lock%>%filter(str_detect(Measure,"leavehome"))%>%select(stateID_new,'2020-03-08':'2020-07-04')%>%mutate(measure_type="2")
+
+neu<-data_lock %>%
+   group_by(stateID_new)%>%
+  summarize_at(vars('2020-03-08':'2020-07-04'), sum)%>%mutate(measure_type="1")%>%add_row(stay_at_home)%>%mutate(measure_type=as.numeric(measure_type))
+
+
+
+
+
+```
+
+```{r}
+data_long<-gather(neu, date, value, '2020-03-08':'2020-07-04')
+#data_long1<-reshape(data_long, v.names="value", timevar="measure_type", idvar=c("stateID_new", "date"), direction="wide")
+data_long1<-spread(data_long, measure_type, value)
+names(data_long1)=c("stateID_new", "date", "value", "stay_at_home")
+```
+
+
+```{r}
+
+
+
+#data_long<-data_long%>%mutate(dateID=as.numeric(date))
+
+range(data_long1$date, na.rm = T)
+
+data_long1$day_year <- strftime(data_long1$date, format = "%j")
+
+
+data_long1<-data_long1%>%
+   group_by(stateID_new)%>%
+  mutate(value_cumu=cumsum(value))%>%
+  mutate(stay_at_home_cumu=cumsum(stay_at_home))
+
+names(data_long1)=c("bula","date_measure","measure_day", "stay_at_home_day", "day_year", 
+                  "measure_cumu", "stay_ate_home_cumu")
+
+```
+
+
+
+
+```{r}
+
+
+
+
+get <- c("hid", "pid", "syear","tranche", "ptagin","pmonin", "ple0008", "plh0171", 
+            "plh0172", "plh0184", "plh0185", "plh0186", "plh0187", 
+            "plj0587", "plj0588", "plj0589",
+            "plh0339", "plh0340", 
+            "plh0341", "plh0342", "plh0035", "plh0182", "pgcasmin", "pgisced11","pskinder", "pkkinder", "bula", "hlc0005_h", "gebjahr", "sex", "ple0010_h", "pla0009_v2"
+            )
+sd<-c("edu", "edu_lmh", "kinderS", "kinderK", "bula", "einkommen", "gebjahr", "sex", "gjahr_h", "geschlecht")
+
+
+health_vars <- c("srh", "sat_hlt", 
+                 "sat_slp", "angr", "anx", "hpy", "sad", 
+                 "lone1", "lone2", "lone3", "phq1", "phq2", "phq3", "phq4", 
+                 "wry_hlt", "lifesat")
+
+
+
+
+
+rechnen <- select(data, all_of(get))
+names(rechnen) <- c("hid", "pid", "syear","tranche", "tag", "monat", health_vars, sd)
+
+rechnen <- mutate_at(rechnen, vars(c("hid", "pid", "syear","tranche", "tag", "monat", all_of(health_vars), all_of(sd))),
+                  list(~ ifelse( . %in% c(-8:-1), NA, .)))
+
+recode.scale <- function(x, na.rm = TRUE) (max(x, na.rm = T) - (x-1)) 
+
+rechnen <- mutate_at(rechnen, vars(angr, anx, sad, lone1, lone2, lone3,
+                          wry_hlt),
+                  .funs = list("r"=~recode.scale(.)))
+
+
+# %>% mutate(edu_cat = cut(edu, breaks = c(0,3, 7, 9)))
+
+rechnen <- rechnen %>% mutate(depr = phq1 + phq2-2) %>% mutate(gad=phq3+phq4-2) %>% mutate(phq=phq1 + phq2+phq3+phq4-4)%>% mutate(wlb = rowSums(cbind(angr_r + anx_r + hpy + sad_r), na.rm = F)) %>%mutate(lone = rowSums(cbind(lone1_r + lone2_r + lone3_r)-3, na.rm = F))
+rechnen<-rechnen%>%mutate(depr_cat=if_else(depr>=3,1,0,NA_real_))%>%mutate(gad_cat=if_else(gad>=3,1,0,NA_real_))%>%mutate(phq_cat=if_else(phq>=5,1,0,NA_real_))%>%mutate(phq_sev=cut(phq, breaks = c(0,2,5,8,12)))%>% mutate(edu_cat = cut(edu, breaks = c(0,3, 7, 9))) %>% mutate(lon_cat  = if_else(lone >= 6, 1, 0, NA_real_))%>%mutate(alter_2020=2020-gjahr_h)
+
+
+health_2019<-c("depr", "gad", "phq", "depr_cat", "gad_cat", "phq_cat", "wlb", "lone", "lon_cat")
+
+rechnen$pdatt2 <- ifelse(rechnen$tag < 10, str_c(0, data$ptagin), data$ptagin)
+rechnen$pdatm2 <- ifelse(rechnen$monat < 10, str_c(0, data$pmonin), data$pmonin)
+rechnen$date <- str_c(rechnen$pdatm2, rechnen$pdatt2, rechnen$syear)
+rechnen$date <- as.Date(rechnen$date, format = "%m %d %y")
+range(rechnen$date, na.rm = T)
+
+rechnen$week <- strftime(rechnen$date, format = "%V")
+rechnen$day_year <- strftime(rechnen$date, format = "%j")
+range(rechnen$week,na.rm = T)
+range(rechnen$day_year,na.rm = T)
+
+#data_re<-reshape(data=data1, v.names=c(""), timevar="syear", idvar="pid", direction=wide)
+
+
+data2020<-filter(rechnen, syear==2020)
+data2019<-filter(rechnen, syear==2019)
+
+data2019<-select(data2019,pid, syear,all_of(health_2019) )
+
+rechnen_final<-merge(data2020, data2019, by="pid", suffixes = c(".2020",".2019"))
+
+rechnen_final <- rechnen_final %>%mutate(bula_stay=case_when(
+                                                   (bula == 1) ~ 0,#schleswig
+                                                   (bula == 2) ~ 0,#hamburg
+                                                   (bula == 3) ~ 0,#nieder
+                                                   (bula == 4) ~ 0,#bremen
+                                                   (bula == 5) ~ 0,#nrw
+                                                   (bula == 6) ~ 0,#hess
+                                                   (bula == 7) ~ 0,#rheinland
+                                                   (bula == 8) ~ 0,#bwu
+                                                   (bula == 9) ~ 1,#bayern
+                                                   (bula == 10) ~ 1,#saarland
+                                                   (bula == 11) ~ 1,#berl
+                                                   (bula == 12) ~ 1,#branden
+                                                   (bula == 13) ~ 0,#MV
+                                                   (bula == 14) ~ 1,#sachsen
+                                                   (bula == 15) ~ 1,#SachsenAnhal
+                                                   (bula == 16) ~ 0))#thü
+rechnen_final <- rechnen_final %>%mutate(bula_stay=factor(bula_stay, labels=c("none", "order"), exclude = NA_real_))%>% mutate(week=as.numeric(week))
+
+
+rechnen_final_measure<-merge(rechnen_final, data_long1, by=c("bula", "day_year"))
+
+#data2019<-select(data2019, pid, depr, anx, phq, depr_cat, anx_cat, phq_cat,phq_sev)
+#data5<-merge(data2020, data2019, by="pid", suffixes = c(".2020",".2019") )
+#data3<-data3 %>%mutate(alter_2020=2020-gebjahr.2018)
+
+
+#data4<-select(data3, depr, anx, phq, depr_cat, anx_cat, phq_cat,phq_sev, tranche, sex.2018, alter_2020, week)
+#data4<-data4 %>% mutate(sex=factor(sex.2018, labels=c("male", "female")))%>% mutate(depr_cat1=factor(depr_cat, labels=c("none", "depression"), exclude = NA_real_))%>% mutate(week1=as.numeric(week))
+
+#<-data5%>% mutate(depr_cat1=factor(depr_cat.2019, labels=c("none", "depression"), exclude = NA_real_))%>% mutate(anx_cat1=factor(anx_cat.2019, labels=c("none", "anxiety"), exclude = NA_real_))%>% mutate(phq_cat1=factor(phq_cat.2019, labels=c("none", "anxdep"), exclude = NA_real_))%>% mutate(week1=as.numeric(week))%>% mutate(tranche1=factor(tranche))
+#view(data1)
+
+```
+```{r}
+
+#rechnen_final_measure<-rechnen_final_measure%>%mutate(tranche=factor(tranche))
+
+```
+
+
+
+```{r}
+
+publish(summary(univariateTable(tranche~alter_2020+geschlecht,
+                                     data=rechnen_final)),org=TRUE)
+
+```
+
+
+```{r}
+dd <- lm(depr.2020~alter_2020+geschlecht+depr_cat.2019*week, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = week, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = week, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+#d <- lmer(anx.2020~anx.2019*tranche, data = data5, REML=T)poly(x_2, 2)
+
+
+#d<-lm(depr.2020~depr.2019*poly(tranche,2), data = data5)
+
+#summ(d, center = TRUE, confint = TRUE, digits = 3) 
+#interact_plot(d, pred = tranche, modx = depr.2019, interval = TRUE,
+#              int.width = 0.8)
+
+#interact_plot(d, pred = tranche, modx = depr.2019, interval = TRUE,
+#              int.width = 0.8, linearity.check = TRUE)
+
+```
+
+```{r}
+
+dlmer<-lmer(depr.2020~alter_2020+geschlecht+measure_cumu +(1|bula), data= rechnen_final_measure, REML = F, na.action = na.omit)
+summary(dlmer)
+
+
+```
+
+```{r}
+  
+dlmer<-lmer(depr.2020~alter_2020+geschlecht+stay_at_home_day +(1|bula), data= rechnen_final_measure, REML = F, na.action = na.omit)
+summary(dlmer)
+
+```
+
+
+```{r}
+dlmer<-lmer(depr.2020~alter_2020+geschlecht+stay_at_home_day +(1|bula), data= rechnen_final_measure, REML = F, na.action = na.omit)
+summary(dlmer)
+```
+
+```{r}
+model <- glm(depr_cat.2020 ~ alter_2020+geschlecht+stay_at_home_day, data=rechnen_final_measure, family="binomial", na.action = na.omit)
+summ(model)
+
+#interact_plot(model, pred = tranche, modx = depr.2019, interval = TRUE,
+   #           int.width = 0.8)
+```
+
+
+
+
+```{r}
+
+dlmer<-lmer(lone.2020~alter_2020+geschlecht+tranche*measure_day +(1|bula), data= rechnen_final_measure, REML = F, na.action = na.omit)
+summary(dlmer)
+plot_model(dlmer, type="int", mdrt.values="meansd")
+interact_plot(dlmer, pred = tranche, modx = measure_day, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+
+
+```{r}
+
+d<-lm(depr.2020~alter_2020+geschlecht+measure_day, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+stargazer(d, type = "text", out="reg.txt", title = "depression")
+
+
+
+```
+
+
+
+
+
+```{r}
+
+
+d<-lm(depr.2020~alter_2020+geschlecht+measure_day*depr.2019, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = depr.2019, modx = measure_day, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+```{r}
+
+d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu*depr.2019, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = depr.2019, modx = measure_cumu, interval = TRUE,
+              int.width = 0.8)
+
+```
+```{r}
+
+d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu*depr_cat.2019, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = measure_cumu, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+
+
+```{r}
+
+d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu*depr_cat.2019*tranche, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+
+```
+
+
+```{r}
+
+d<-lm(depr.2020~alter_2020+geschlecht+measure_day*depr_cat.2019, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = measure_day, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+```{r}
+
+d<-lm(depr.2020~alter_2020+geschlecht+measure_day*depr_cat.2019*tranche, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+
+```
+
+
+
+```{r}
+
+
+d<-lm(lone.2020~alter_2020+geschlecht+measure_day, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+```
+
+
+```{r}
+
+d<-lm(lone.2020~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+```
+
+```{r}
+
+d<-lm(lone.2020~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = tranche, modx = measure_day, interval = TRUE,
+              int.width = 0.8)
+
+```
+
+```{r}
+
+
+d<-lm(lone.2020~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = tranche, modx = measure_cumu, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE )
+interact_plot(d, pred = tranche, modx = measure_cumu, interval = TRUE,
+              int.width = 0.8)
+
+```
+
+
+
+```{r}
+
+d<-lm(lone.2020~alter_2020+geschlecht+measure_cumu*depr.2019, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = depr.2019, modx = measure_cumu, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+```{r}
+
+d<-lm(lone.2020~alter_2020+geschlecht+measure_day*depr.2019, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = depr.2019, modx = measure_day, interval = TRUE,
+              int.width = 0.8)
+
+```
+
+
+
+
+```{r}
+
+d<-lm(lone.2020~alter_2020+geschlecht+measure_cumu*depr_cat.2019, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = measure_cumu, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+```{r}
+
+d<-lm(lone.2020~alter_2020+geschlecht+measure_day*depr_cat.2019, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = measure_day, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+
+
+
+```{r}
+
+d<-lm(lifesat~alter_2020+geschlecht+measure_day, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+
+
+```
+
+```{r}
+
+d<-lm(lifesat~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+```
+
+```{r}
+
+d<-lm(lifesat~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+```
+
+
+
+```{r}
+
+d<-lm(lifesat~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(d, pred = tranche, modx = measure_day, interval = TRUE,
+              int.width = 0.8)
+
+```
+
+
+```{r}
+d<-lm(depr.2020~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3)
+```
+
+
+```{r}
+
+
+
+
+```
+
+```{r}
+
+d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+
+
+```
+
+
+
+```{r}
+
+d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure)
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+
+```
+
+
+```{r}
+dd <- lm(phq.2020~alter_2020+geschlecht+phq_cat.2019*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = tranche, modx = phq_cat.2019, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = tranche, modx = phq_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+
+```
+
+
+```{r}
+
+dd <- lm(wlb.2020~alter_2020+geschlecht+depr_cat.2019*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+```
+```{r}
+
+dd <- lm(lifesat~alter_2020+geschlecht+depr.2019*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
+              int.width = 0.8)
+
+```
+
+
+```{r}
+
+dd <- lm(gad.2020~alter_2020+geschlecht+gad.2019*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = tranche, modx = gad.2019, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = tranche, modx = gad.2019, interval = TRUE,
+              int.width = 0.8)
+
+```
+
+
+```{r}
+
+dd <- lm(gad.2020~alter_2020+geschlecht+depr_cat.2019*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+
+```{r}
+
+dd <- lm(lone.2020~alter_2020+geschlecht+depr.2019*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+
+```{r}
+
+
+dd <- lm(depr.2020~geschlecht+bula_stay*poly(alter_2020,2)*week, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+             int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+              int.width = 0.8)
+```
+
+```{r}
+dd <- lm(phq.2020~geschlecht+bula_stay*poly(alter_2020,2)*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+             int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+              int.width = 0.8)
+```
+
+```{r}
+
+dd <- lm(lone.2020~geschlecht+bula_stay*alter_2020*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+             int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+              int.width = 0.8)
+```
+
+
+```{r}
+dd <- lmer(phq.2020~geschlecht+bula_stay*alter_2020*tranche +(1|bula), data = rechnen_final)
+
+summary(dd)
+anova(dd)
+
+#summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+            int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+
+```{r}
+dd <- lm(wlb.2020~geschlecht+bula_stay*alter_2020*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+             int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+              int.width = 0.8)
+```
+
+
+```{r}
+
+dd <- lm(lifesat~geschlecht+bula_stay*alter_2020*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+             int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
+              int.width = 0.8)
+
+```
+
+
+```{r}
+
+d<-lm(depr.2020~geschlecht+bula_stay*poly(alter_2020,2)*tranche, data = rechnen_final)
+
+summ(d, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(d, pred = alter_2020, modx = bula_stay, interval = TRUE,
+              int.width = 0.8)
+
+interact_plot(d, pred = alter_2020, modx = bula_stay, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE)
+
+
+```
+
+```{r}
+dd <- lm(lone.2020~alter_2020+geschlecht+depr_cat.2019*tranche, data = rechnen_final)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8, linearity.check = TRUE )
+interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8)
+```
+
+```{r}
+dd <- lm(depr.2020~anx_cat.2019*tranche, data = data5)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(dd, pred = tranche, modx = anx_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+```{r}
+
+dd <- lm(anx.2020~anx_cat.2019*tranche, data = data5)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(dd, pred = tranche, modx = anx_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+```{r}
+
+
+dd <- lm(anx.2020~depr_cat.2019*tranche, data = data5)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+```
+
+```{r}
+dd <- lm(depr.2020~depr.2019*tranche, data = data5)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
+              int.width = 0.8)
+```
+
+
+
+```{r}
+dd <- lm(depr.2020~tranche1*depr_cat1, data = data5)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+#interact_plot(dd, pred = tranche1, modx =depr_cat.2019, interval = TRUE,
+ #             int.width = 0.8)
+
+#interact_plot(dd, pred = tranche1, modx =depr_cat.2019, interval = TRUE,
+ #             int.width = 0.8, linearity.check = TRUE)
+cat_plot(dd, pred = tranche1, modx = depr_cat1, geom="bar", interval = F)
+
+```
+
+
+
+```{r}
+
+model <- glm(depr_cat.2020 ~ depr.2019*tranche, data=data5, family="binomial")
+summ(model)
+
+interact_plot(model, pred = tranche, modx = depr.2019, interval = TRUE,
+              int.width = 0.8)
+```
+
+
+
+```{r}
+model <- glm(depr_cat.2020 ~ geschlecht+poly(alter_2020,2)*bula_stay*tranche, data=rechnen_final, family="binomial")
+summ(model)
+
+interact_plot(model, pred = alter_2020, modx = bula_stay, interval = TRUE,
+              int.width = 0.8)
+
+```
+
+
+
+
+
+```{r}
+
+
+model <- glm(depr_cat.2020 ~ geschlecht + alter_2020+depr.2019*week, data=rechnen_final, family="binomial")
+summ(model)
+
+interact_plot(model, pred = week, modx = depr.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+```{r}
+model <- glm(gad_cat.2020 ~ geschlecht + alter_2020+depr.2019*tranche, data=rechnen_final, family="binomial")
+summ(model)
+
+interact_plot(model, pred = tranche, modx = depr.2019, interval = TRUE,
+              int.width = 0.8)
+
+```
+```{r}
+
+
+model <- glm(phq_cat.2020 ~ geschlecht + alter_2020+phq.2019*tranche, data=rechnen_final, family="binomial")
+summ(model)
+
+interact_plot(model, pred = tranche, modx = phq.2019, interval = TRUE,
+              int.width = 0.8)
+
+
+```
+
+
+```{r}
+
+model <- glm(gad_cat.2020 ~ alter_2020+geschlecht+bula_stay*gad_cat.2019*tranche, data=rechnen_final, family="binomial")
+summ(model)
+
+interact_plot(model, pred = tranche, modx = gad_cat.2019, interval = TRUE,
+              int.width = 0.8)
+
+interact_plot(model, pred = tranche, modx = bula_stay, interval = TRUE,
+              int.width = 0.8)
+```
+
+
+
+
+```{r}
+
+my_comparisons <- list( c("1", "2"), c("1", "3"), c("1", "4"), c("1", "5"), c("1", "6"), c("1", "7"), c("1", "8"))
+
+compare_means(phq ~ tranche,  data = data4, ref.group = "1",
+              method = "t.test")
+
+
+ggbarplot(data4, x = "tranche", y = "phq", 
+                  add = "mean_se",
+          color = "tranche", palette = "jco",fill="tranche", position = position_dodge(0.8)) + 
+  stat_compare_means(method = "anova", label.y = 2)+      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "1") 
+
+ggbarplot(data5, x = "tranche", y = "phq.2020", 
+                  add = "mean_se",
+          color = "depr_cat1", palette = "jco",fill="depr_cat1", position = position_dodge(0.8)) + stat_compare_means(aes(group = depr_cat1), label = "p.signif", label.y = 2)
+  
+
+
+ggerrorplot(data5, x = "tranche", y = "anx.2020", 
+                  add = "mean_se",
+          color = "anx_cat1", palette = "jco", position = position_dodge(0.3)) + stat_compare_means(aes(group = anx_cat1), label = "p.signif", label.y = 1.5)
+#  + stat_compare_means(comparisons = my_comparisons)
+
+ggerrorplot(data5, x = "tranche", y = "depr.2020", 
+                  add = "mean_se",
+          color = "depr_cat1", palette = "jco", position = position_dodge(0.3)) + stat_compare_means(aes(group = depr_cat1), label = "p.signif", label.y = 1.5)
+#  + stat_compare_means(comparisons = my_comparisons)
+
+ggerrorplot(data5, x = "week1", y = "phq.2020", 
+                  add = "mean_se",
+          color = "phq_cat1", palette = "jco", position = position_dodge(0.3)) + stat_compare_means(aes(group = phq_cat1), label = "p.signif", label.y = 1.5)
+#  + stat_compare_means(comparisons = my_comparisons)
+
+ggerrorplot(data5, x = "week_new", y = "phq.2020", 
+                  add = "mean_se",
+          color = "phq_cat1", palette = "jco", position = position_dodge(0.3)) + stat_compare_means(aes(group = phq_cat1), label = "p.signif", label.y = 1.5)
+#  + stat_compare_means(comparisons = my_comparisons)
+
+ggerrorplot(data5, x = "tranche", y = "depr.2020", 
+                  add = "mean_se", facet.by = "depr_cat1",
+          color = "depr_cat1", palette = "jco", position = position_dodge(0.3)) + 
+   stat_compare_means(comparisons = my_comparisons)
+
+
+#ggplot(data4, aes(tranche, phq, fill=sex))+stat_summary(fun.y=mean, geom="bar", position="dodge")+ stat_summary(fun.data = mean_cl_normal, geom = #"errorbar", position =position_dodge(width=0.90), width = 0.2)
+
+```
+```
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
