@@ -250,7 +250,10 @@ rechnen_final_measure<-merge(rechnen_final, data_long1, by=c("bula", "day_year")
 ```{r}
 
 
-rechnen_final_measure<-rechnen_final_measure%>%mutate(phq_anstieg=phq.2020-phq.2019)%>%mutate(geschlecht_r=if_else(geschlecht==2, 1, 0, NA_real_))%>%mutate(geschlecht_r=factor(geschlecht, labels=c("male", "female")))%>%mutate(education.2019=factor(edu_lmh.2019, labels=c("primary education", "lower secondary education", "upper secondary education","post-secondary non-tertiary education", "short-cycle tertiary education", "Bachelor or equivalent", "Master or equivalent", "Doctorial or equivalent", exclude=NA)))%>%mutate(kinder=if_else(kinderS==1 |kinderK==1, 1, 0,NA_real_))%>%mutate(living_with_children=factor(kinder,labels=c("no", "yes"),exclude=NA))%>%mutate(erwerbstaetig_neu=if_else(erwerbstaetig==9, 0, 1,NA_real_))%>%mutate(erwerbstaetig_neu=factor(erwerbstaetig_neu,labels=c("no", "yes"),exclude=NA))
+rechnen_final_measure<-rechnen_final_measure%>%mutate(phq_anstieg=phq.2020-phq.2019)%>%mutate(geschlecht_r=if_else(geschlecht==2, 1, 0, NA_real_))%>%mutate(geschlecht_r=factor(geschlecht, labels=c("male", "female")))%>%mutate(education.2019=factor(edu_lmh.2019, labels=c("primary education", "lower secondary education", "upper secondary education","post-secondary non-tertiary education", "short-cycle tertiary education", "Bachelor or equivalent", "Master or equivalent", "Doctorial or equivalent", exclude=NA)))%>%mutate(kinder=if_else(kinderS==1 |kinderK==1, 1, 0,NA_real_))%>%mutate(living_with_children=factor(kinder,labels=c("no", "yes"),exclude=NA))%>%mutate(erwerbstaetig_neu=if_else(erwerbstaetig==9, 0, 1,NA_real_))%>%mutate(erwerbstaetig_neu=factor(erwerbstaetig_neu,labels=c("no", "yes"),exclude=NA))%>%mutate(edu_cat.2019=case_when(
+                                                   (edu_lmh.2019 <3) ~ 0,#low
+                                                   (edu_lmh.2019 > 2 & edu_lmh.2019<5) ~ 1,#medium
+                                                   (edu_lmh.2019 > 4) ~ 2))%>%mutate(edu_cat.2019_r=factor(edu_cat.2019, labels=c("low", "medium", "high"),exclude=NA))%>%mutate(wave=factor(tranche))                                                 
 
 #%>%mutate(erwerbstaetig=factor(as.numeric(erwerbstaetig),labels=c("voll erwerbstaetig", "Teilzeitbeschaeftigt", "teilzeitbeschaeftigt", #"Ausbildung", "geringfuegig erwerbstaetig", "nicht erwerbstaetig"),exclude=NA))
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
@@ -262,13 +265,13 @@ rechnen_final_measure<-rechnen_final_measure%>%mutate(phq_anstieg=phq.2020-phq.2
 ```{r}
 
 
-table1(~geschlecht_r+alter_2020+education.2019+living_with_children+erwerbstaetig_neu|factor(tranche), data=rechnen_final_measure)
+table1(~geschlecht_r+alter_2020+edu_cat.2019_r+living_with_children+erwerbstaetig_neu|factor(tranche), data=rechnen_final_measure)
 
 ```
 
 ```{r}
 
-c<-compareGroups(tranche~geschlecht_r+alter_2020+education.2019+living_with_children+erwerbstaetig_neu, data=rechnen_final_measure,  max.ylev=9)
+c<-compareGroups(tranche~geschlecht_r+alter_2020+edu_cat.2019_r+living_with_children+erwerbstaetig_neu, data=rechnen_final_measure,  max.ylev=9)
 cd<-createTable(c)
 export2md(cd, header.labels = c(p.overall = "p-value"))
 
@@ -1060,19 +1063,84 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 
 
+
+
+
+
 ```{r}
 
-#stay ata home depr/angst 2019 als moderator
+#tranche depr/angst 2019 als moderator
 
-#alter, geschlecht, maßnahme*depr/angst
+#alter, geschlecht, tranche*depr/angst
 
+dd <- lm(depr.2020~alter_2020+geschlecht_r+phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(gad.2020~alter_2020+geschlecht_r+phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(phq.2020~alter_2020+geschlecht_r+phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lifesat~alter_2020+geschlecht_r+phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
 
 
 
 ```
 
+```{r}
+#tranche depr/angst 2019 als moderator
+
+#alter, geschlecht, tranche*depr/angst
+
+dd <- lm(depr.2020~alter_2020+geschlecht_r+phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(gad.2020~alter_2020+geschlecht_r+phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(phq.2020~alter_2020+geschlecht_r+phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lifesat~alter_2020+geschlecht_r+phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+
+```
 
 
 ```{r}
