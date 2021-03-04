@@ -55,6 +55,7 @@ library(lmerTest)
 library(sjPlot)
 library(boot)
 library(table1)
+library(compareGroups)
 
 ```
 
@@ -153,9 +154,9 @@ get <- c("hid", "pid", "syear","tranche", "ptagin","pmonin", "ple0008", "plh0171
             "plh0172", "plh0184", "plh0185", "plh0186", "plh0187", 
             "plj0587", "plj0588", "plj0589",
             "plh0339", "plh0340", 
-            "plh0341", "plh0342", "plh0035", "plh0182", "pgcasmin", "pgisced11","pskinder", "pkkinder", "bula", "hlc0005_h", "gebjahr", "sex", "ple0010_h", "pla0009_v2"
+            "plh0341", "plh0342", "plh0035", "plh0182", "pgcasmin", "pgisced11","pskinder", "pkkinder", "bula", "hlc0005_h", "gebjahr", "sex", "ple0010_h", "pla0009_v2", "plb0022_h"
             )
-sd<-c("edu", "edu_lmh", "kinderS", "kinderK", "bula", "einkommen", "gebjahr", "sex", "gjahr_h", "geschlecht")
+sd<-c("edu", "edu_lmh", "kinderS", "kinderK", "bula", "einkommen", "gebjahr", "sex", "gjahr_h", "geschlecht", "erwerbstaetig")
 
 
 health_vars <- c("srh", "sat_hlt", 
@@ -186,7 +187,7 @@ rechnen <- rechnen %>% mutate(depr = phq1 + phq2-2) %>% mutate(gad=phq3+phq4-2) 
 rechnen<-rechnen%>%mutate(depr_cat=if_else(depr>=3,1,0,NA_real_))%>%mutate(gad_cat=if_else(gad>=3,1,0,NA_real_))%>%mutate(phq_cat=if_else(phq>=5,1,0,NA_real_))%>%mutate(phq_sev=cut(phq, breaks = c(0,2,5,8,12)))%>% mutate(edu_cat = cut(edu, breaks = c(0,3, 7, 9))) %>% mutate(lon_cat  = if_else(lone >= 6, 1, 0, NA_real_))%>%mutate(alter_2020=2020-gjahr_h)
 
 
-health_2019<-c("depr", "gad", "phq", "depr_cat", "gad_cat", "phq_cat", "wlb", "lone", "lon_cat")
+health_2019<-c("depr", "gad", "phq", "depr_cat", "gad_cat", "phq_cat", "wlb", "lone", "lon_cat", "edu_lmh")
 
 rechnen$pdatt2 <- ifelse(rechnen$tag < 10, str_c(0, data$ptagin), data$ptagin)
 rechnen$pdatm2 <- ifelse(rechnen$monat < 10, str_c(0, data$pmonin), data$pmonin)
@@ -248,7 +249,11 @@ rechnen_final_measure<-merge(rechnen_final, data_long1, by=c("bula", "day_year")
 
 ```{r}
 
-rechnen_final_measure<-rechnen_final_measure%>%mutate(phq_anstieg=phq.2020-phq.2019)
+
+rechnen_final_measure<-rechnen_final_measure%>%mutate(phq_anstieg=phq.2020-phq.2019)%>%mutate(geschlecht_r=if_else(geschlecht==2, 1, 0, NA_real_))%>%mutate(geschlecht_r=factor(geschlecht, labels=c("male", "female")))%>%mutate(education.2019=factor(edu_lmh.2019, labels=c("primary education", "lower secondary education", "upper secondary education","post-secondary non-tertiary education", "short-cycle tertiary education", "Bachelor or equivalent", "Master or equivalent", "Doctorial or equivalent", exclude=NA)))%>%mutate(kinder=if_else(kinderS==1 |kinderK==1, 1, 0,NA_real_))%>%mutate(living_with_children=factor(kinder,labels=c("no", "yes"),exclude=NA))%>%mutate(erwerbstaetig_neu=if_else(erwerbstaetig==9, 0, 1,NA_real_))%>%mutate(erwerbstaetig_neu=factor(erwerbstaetig_neu,labels=c("no", "yes"),exclude=NA))
+
+#%>%mutate(erwerbstaetig=factor(as.numeric(erwerbstaetig),labels=c("voll erwerbstaetig", "Teilzeitbeschaeftigt", "teilzeitbeschaeftigt", #"Ausbildung", "geringfuegig erwerbstaetig", "nicht erwerbstaetig"),exclude=NA))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 
 ```
 
@@ -257,40 +262,49 @@ rechnen_final_measure<-rechnen_final_measure%>%mutate(phq_anstieg=phq.2020-phq.2
 ```{r}
 
 
-table1(~factor(geschlecht)+alter_2020|factor(tranche), data=rechnen_final_measure)
+table1(~geschlecht_r+alter_2020+education.2019+living_with_children+erwerbstaetig_neu|factor(tranche), data=rechnen_final_measure)
 
 ```
+
+```{r}
+
+c<-compareGroups(tranche~geschlecht_r+alter_2020+education.2019+living_with_children+erwerbstaetig_neu, data=rechnen_final_measure,  max.ylev=9)
+cd<-createTable(c)
+export2md(cd, header.labels = c(p.overall = "p-value"))
+
+```
+
 
 
 ```{r}
 #Maßnahmen kumuliert 
-#alter, geschlecht, maßnahme
+#alter, geschlecht_r, maßnahme
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -300,33 +314,33 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 ```{r}
 #Maßnahmen am Tag der Befragung
-#alter, geschlecht, maßnahme
+#alter, geschlecht_r, maßnahme
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_day, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -338,33 +352,33 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 ```{r}
 
 #stay-at-home order  - kumuliert 
-#alter, geschlecht, maßnahme
+#alter, geschlecht_r, maßnahme
 
-dd <- lm(depr.2020~alter_2020+geschlecht+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+stay_at_home_cumu, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -374,33 +388,33 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 ```{r}
 #stay-at-home order  ja oder nein 
-#alter, geschlecht, maßnahme
+#alter, geschlecht_r, maßnahme
 
-dd <- lm(depr.2020~alter_2020+geschlecht+bula_stay, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+bula_stay, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+bula_stay, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+bula_stay, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+bula_stay, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+bula_stay, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+bula_stay, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -415,33 +429,33 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 ```{r}
 
 #Maßnahmen kumuliert 
-#alter, geschlecht, maßnahme*tranche
+#alter, geschlecht_r, maßnahme*tranche
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -452,33 +466,33 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 ```{r}
 #Maßnahmen am tag 
-#alter, geschlecht, maßnahme*tranche
+#alter, geschlecht_r, maßnahme*tranche
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -489,33 +503,33 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 ```{r}
 
 #stay at home kumuliert 
-#alter, geschlecht, maßnahme*tranche
+#alter, geschlecht_r, maßnahme*tranche
 
-dd <- lm(depr.2020~alter_2020+geschlecht+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+stay_at_home_cumu*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -526,34 +540,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 ```{r}
 
 #stay_at_home ja nein 
-#alter, geschlecht, maßnahme*tranche
+#alter, geschlecht_r, maßnahme*tranche
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+bula_stay*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 #interact_plot(dd, pred = tranche, modx = bula_stay, interval = TRUE,
@@ -568,34 +582,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #maßnahme kumuliert depr/angst 2019 als moderator
 
-#alter, geschlecht, maßnahme*depr/angst
+#alter, geschlecht_r, maßnahme*depr/angst
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -607,34 +621,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #maßnahme tag der umfrage depr/angst 2019 als moderator
 
-#alter, geschlecht, maßnahme*depr/angst
+#alter, geschlecht_r, maßnahme*depr/angst
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_day*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -646,34 +660,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #stay ata home depr/angst 2019 als moderator
 
-#alter, geschlecht, maßnahme*depr/angst
+#alter, geschlecht_r, maßnahme*depr/angst
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+bula_stay*phq.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -684,34 +698,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #maßnahme kumuliert phq 2019 - kategorial als moderator
 
-#alter, geschlecht, maßnahme*depr/angst
+#alter, geschlecht_r, maßnahme*depr/angst
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -723,34 +737,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #maßnahme tag der umfrage phq 2019 - kategorial als moderator
 
-#alter, geschlecht, maßnahme*depr/angst
+#alter, geschlecht_r, maßnahme*depr/angst
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -762,34 +776,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #stay ata home phq 2019 - kategorial als moderator
 
-#alter, geschlecht, maßnahme*depr/angst
+#alter, geschlecht_r, maßnahme*depr/angst
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -803,34 +817,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #maßnahme kumuliert depr/angst 2019 als moderator
 
-#alter, geschlecht, maßnahme*depr/angst*tranche
+#alter, geschlecht_r, maßnahme*depr/angst*tranche
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_cumu*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -842,34 +856,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #maßnahme tag der umfrage depr/angst 2019 als moderator
 
-#alter, geschlecht, maßnahme*depr/angst*tranche
+#alter, geschlecht_r, maßnahme*depr/angst*tranche
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_day*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -881,34 +895,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #stay ata home depr/angst 2019 als moderator
 
-#alter, geschlecht, maßnahme*depr/angst*tranche
+#alter, geschlecht_r, maßnahme*depr/angst*tranche
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+bula_stay*phq.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -919,34 +933,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #maßnahme kumuliert phq 2019 - kategorial als moderator
 
-#alter, geschlecht, maßnahme*depr/angst*tranche
+#alter, geschlecht_r, maßnahme*depr/angst*tranche
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_cumu*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -958,34 +972,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #maßnahme tag der umfrage phq 2019 - kategorial als moderator
 
-#alter, geschlecht, maßnahme*depr/angst*tranche
+#alter, geschlecht_r, maßnahme*depr/angst*tranche
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_day*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
@@ -997,34 +1011,34 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 #stay ata home phq 2019 - kategorial als moderator
 
-#alter, geschlecht, maßnahme*depr/angst*tranche
+#alter, geschlecht_r, maßnahme*depr/angst*tranche
 
 
-dd <- lm(depr.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-dd <- lm(gad.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(depr.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(gad.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(phq.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wlb.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+dd <- lm(lifesat~alter_2020+geschlecht_r+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+
+dd <- lm(lone.2020~alter_2020+geschlecht_r+bula_stay*phq_cat.2019*tranche, data = rechnen_final_measure, na.action = na.omit)
 
 summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
