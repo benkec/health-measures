@@ -1,6 +1,8 @@
 ---
 title: "soep"
-output: html_document
+output: 
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -56,6 +58,7 @@ library(sjPlot)
 library(boot)
 library(table1)
 library(compareGroups)
+library(knitr)
 
 ```
 
@@ -277,40 +280,207 @@ export2md(cd, header.labels = c(p.overall = "p-value"))
 
 ```
 
+```{r}
+#Maßnahmen kumuliert 
+#alter, geschlecht_r, education, employment, living with children, maßnahme
+
+dd1 <- lm(depr.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd1, center = TRUE, confint = TRUE, digits = 3) 
+
+
+
+dd2 <- lm(gad.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd2, center = TRUE, confint = TRUE, digits = 3) 
+
+dd3 <- lm(phq.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd3, center = TRUE, confint = TRUE, digits = 3) 
+
+dd4 <- lm(wlb.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd4, center = TRUE, confint = TRUE, digits = 3) 
+
+dd5 <- lm(wry_hlt_r~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd5, center = TRUE, confint = TRUE, digits = 3) 
+
+dd6 <- lm(lifesat~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd6, center = TRUE, confint = TRUE, digits = 3) 
+
+dd7 <- lm(lone.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd7, center = TRUE, confint = TRUE, digits = 3) 
+
+tab_model(dd1,dd2, dd3,dd4,dd5,dd6,dd7,  show.std=T, show.est=F, use.viewer = F)
+
+
+
+
+```
+
+```{r}
+dd1 <- lm(depr.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd1, center = TRUE, confint = TRUE, digits = 3) 
+
+
+
+dd2 <- lm(gad.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd2, center = TRUE, confint = TRUE, digits = 3) 
+
+dd3 <- lm(phq.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd3, center = TRUE, confint = TRUE, digits = 3) 
+
+dd4 <- lm(wlb.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd4, center = TRUE, confint = TRUE, digits = 3) 
+
+dd5 <- lm(wry_hlt_r~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd4, center = TRUE, confint = TRUE, digits = 3) 
+
+dd6 <- lm(lifesat~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd6, center = TRUE, confint = TRUE, digits = 3) 
+
+dd7 <- lm(lone.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd7, center = TRUE, confint = TRUE, digits = 3) 
+
+tab_model(dd1,dd2, dd3,dd4,dd5,dd6,dd7,  show.std=T, show.est=F, use.viewer = F)%>% 
+return()%$%
+  knitr%>% asis_output()
+
+
+
+```
+
+
+
+
+```{r}
+
+#Maßnahmen day
+#alter, geschlecht_r, education, employment, living with children, maßnahme
+
+dd1 <- lm(depr.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_day, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd1, center = TRUE, confint = TRUE, digits = 3) 
+
+
+
+dd2 <- lm(gad.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_day, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd2, center = TRUE, confint = TRUE, digits = 3) 
+
+dd3 <- lm(phq.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_day, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd3, center = TRUE, confint = TRUE, digits = 3) 
+
+dd4 <- lm(wlb.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_day, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd4, center = TRUE, confint = TRUE, digits = 3) 
+
+dd5 <- lm(wry_hlt_r~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_day, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd5, center = TRUE, confint = TRUE, digits = 3) 
+
+dd6 <- lm(lifesat~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_day, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd6, center = TRUE, confint = TRUE, digits = 3) 
+
+dd7 <- lm(lone.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+measure_day, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd7, center = TRUE, confint = TRUE, digits = 3) 
+
+tab_model(dd1,dd2, dd3,dd4,dd5,dd6,dd7,  show.std=T, show.est=F)
+
+```
+
+
+
+```{r}
+
+#stay_at_home
+#alter, geschlecht_r, education, employment, living with children, maßnahme
+
+dd1 <- lm(depr.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd1, center = TRUE, confint = TRUE, digits = 3) 
+
+
+
+dd2 <- lm(gad.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd2, center = TRUE, confint = TRUE, digits = 3) 
+
+dd3 <- lm(phq.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd3, center = TRUE, confint = TRUE, digits = 3) 
+
+dd4 <- lm(wlb.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd4, center = TRUE, confint = TRUE, digits = 3) 
+
+dd5 <- lm(wry_hlt_r~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd5, center = TRUE, confint = TRUE, digits = 3) 
+
+dd6 <- lm(lifesat~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd6, center = TRUE, confint = TRUE, digits = 3) 
+
+dd7 <- lm(lone.2020~alter_2020+geschlecht_r+edu_cat.2019_r+living_with_children+erwerbstaetig_neu+bula_stay, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd7, center = TRUE, confint = TRUE, digits = 3) 
+
+tab_model(dd1,dd2, dd3,dd4,dd5,dd6,dd7,  show.std=T, show.est=F)
+
+
+```
+
 
 
 ```{r}
 #Maßnahmen kumuliert 
 #alter, geschlecht_r, maßnahme
 
-dd <- lm(depr.2020~alter_2020+geschlecht_r_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd1 <- lm(depr.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd1, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd2 <- lm(gad.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd2, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd3 <- lm(phq.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd3, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd4 <- lm(wlb.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd4, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd5 <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd5, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+dd6 <- lm(lifesat~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd6, center = TRUE, confint = TRUE, digits = 3) 
 
+dd7 <- lm(lone.2020~alter_2020+geschlecht_r+measure_cumu, data = rechnen_final_measure, na.action = na.omit)
+
+summ(dd7, center = TRUE, confint = TRUE, digits = 3) 
+
+tab_model(dd1,dd2, dd3,dd4,dd5,dd6,dd7,  show.std=T, show.est=F)
 
 ```
 
@@ -319,33 +489,35 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 #Maßnahmen am Tag der Befragung
 #alter, geschlecht_r, maßnahme
 
-dd <- lm(depr.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd1 <- lm(depr.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd1, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(gad.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd2 <- lm(gad.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd2, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(phq.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd3 <- lm(phq.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd3, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wlb.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd4 <- lm(wlb.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd4, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd5 <- lm(wry_hlt_r~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd5, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lifesat~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd6 <- lm(lifesat~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd6, center = TRUE, confint = TRUE, digits = 3) 
 
-dd <- lm(lone.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
+dd7 <- lm(lone.2020~alter_2020+geschlecht_r+measure_day, data = rechnen_final_measure, na.action = na.omit)
 
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
+summ(dd7, center = TRUE, confint = TRUE, digits = 3) 
+
+tab_model(dd1,dd2, dd3,dd4,dd5,dd6,dd7,  show.std=T, show.est=F)
 
 
 
@@ -1408,624 +1580,4 @@ summ(dd, center = TRUE, confint = TRUE, digits = 3)
 
 
 
-```{r}
-
-dlmer<-lmer(depr.2020~alter_2020+geschlecht+measure_cumu +(1|bula), data= rechnen_final_measure, REML = F, na.action = na.omit)
-summ(dlmer)
-
-
-```
-
-```{r}
-  
-dlmer<-lmer(depr.2020~alter_2020+geschlecht+stay_at_home_day +(1|bula), data= rechnen_final_measure, REML = F, na.action = na.omit)
-summary(dlmer)
-
-```
-
-
-```{r}
-dlmer<-lmer(depr.2020~alter_2020+geschlecht+stay_at_home_day +(1|bula), data= rechnen_final_measure, REML = F, na.action = na.omit)
-summary(dlmer)
-```
-
-```{r}
-model <- glm(depr_cat.2020 ~ alter_2020+geschlecht+stay_at_home_day, data=rechnen_final_measure, family="binomial", na.action = na.omit)
-summ(model)
-
-#interact_plot(model, pred = tranche, modx = depr.2019, interval = TRUE,
-   #           int.width = 0.8)
-```
-
-
-
-
-```{r}
-
-dlmer<-lmer(lone.2020~alter_2020+geschlecht+tranche*measure_day +(1|bula), data= rechnen_final_measure, REML = F, na.action = na.omit)
-summary(dlmer)
-plot_model(dlmer, type="int", mdrt.values="meansd")
-interact_plot(dlmer, pred = tranche, modx = measure_day, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-
-
-```{r}
-
-d<-lm(depr.2020~alter_2020+geschlecht+measure_day, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-stargazer(d, type = "text", out="reg.txt", title = "depression")
-
-
-
-```
-
-
-
-
-
-```{r}
-
-
-d<-lm(depr.2020~alter_2020+geschlecht+measure_day*depr.2019, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = depr.2019, modx = measure_day, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-```{r}
-
-d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu*depr.2019, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = depr.2019, modx = measure_cumu, interval = TRUE,
-              int.width = 0.8)
-
-```
-```{r}
-
-d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu*depr_cat.2019, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = measure_cumu, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-
-
-```{r}
-
-d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu*depr_cat.2019*tranche, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-
-```
-
-
-```{r}
-
-d<-lm(depr.2020~alter_2020+geschlecht+measure_day*depr_cat.2019, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = measure_day, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-```{r}
-
-d<-lm(depr.2020~alter_2020+geschlecht+measure_day*depr_cat.2019*tranche, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-
-```
-
-
-
-```{r}
-
-
-d<-lm(lone.2020~alter_2020+geschlecht+measure_day, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-```
-
-
-```{r}
-
-d<-lm(lone.2020~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-```
-
-```{r}
-
-d<-lm(lone.2020~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure, na.action = na.omit)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = tranche, modx = measure_day, interval = TRUE,
-              int.width = 0.8)
-
-```
-
-```{r}
-
-
-d<-lm(lone.2020~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = tranche, modx = measure_cumu, interval = TRUE,
-              int.width = 0.8, linearity.check = TRUE )
-interact_plot(d, pred = tranche, modx = measure_cumu, interval = TRUE,
-              int.width = 0.8)
-
-```
-
-
-
-```{r}
-
-d<-lm(lone.2020~alter_2020+geschlecht+measure_cumu*depr.2019, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = depr.2019, modx = measure_cumu, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-```{r}
-
-d<-lm(lone.2020~alter_2020+geschlecht+measure_day*depr.2019, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = depr.2019, modx = measure_day, interval = TRUE,
-              int.width = 0.8)
-
-```
-
-
-
-
-```{r}
-
-d<-lm(lone.2020~alter_2020+geschlecht+measure_cumu*depr_cat.2019, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = measure_cumu, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-```{r}
-
-d<-lm(lone.2020~alter_2020+geschlecht+measure_day*depr_cat.2019, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = measure_day, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-
-
-
-```{r}
-
-d<-lm(lifesat~alter_2020+geschlecht+measure_day, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-
-
-```
-
-```{r}
-
-d<-lm(lifesat~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-```
-
-```{r}
-
-d<-lm(lifesat~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-```
-
-
-
-```{r}
-
-d<-lm(lifesat~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(d, pred = tranche, modx = measure_day, interval = TRUE,
-              int.width = 0.8)
-
-```
-
-
-```{r}
-d<-lm(depr.2020~alter_2020+geschlecht+measure_day*tranche, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3)
-```
-
-
-```{r}
-
-
-
-
-```
-
-```{r}
-
-d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu*tranche, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-
-
-```
-
-
-
-```{r}
-
-d<-lm(depr.2020~alter_2020+geschlecht+measure_cumu, data = rechnen_final_measure)
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-
-```
-
-
-```{r}
-dd <- lm(phq.2020~alter_2020+geschlecht+phq_cat.2019*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = tranche, modx = phq_cat.2019, interval = TRUE,
-              int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = tranche, modx = phq_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-
-```
-
-
-```{r}
-
-dd <- lm(wlb.2020~alter_2020+geschlecht+depr_cat.2019*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-```
-```{r}
-
-dd <- lm(lifesat~alter_2020+geschlecht+depr.2019*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
-              int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
-              int.width = 0.8)
-
-```
-
-
-```{r}
-
-dd <- lm(gad.2020~alter_2020+geschlecht+gad.2019*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = tranche, modx = gad.2019, interval = TRUE,
-              int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = tranche, modx = gad.2019, interval = TRUE,
-              int.width = 0.8)
-
-```
-
-
-```{r}
-
-dd <- lm(gad.2020~alter_2020+geschlecht+depr_cat.2019*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-
-```{r}
-
-dd <- lm(lone.2020~alter_2020+geschlecht+depr.2019*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
-              int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-
-```{r}
-
-
-dd <- lm(depr.2020~geschlecht+bula_stay*poly(alter_2020,2)*week, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-             int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-              int.width = 0.8)
-```
-
-```{r}
-dd <- lm(phq.2020~geschlecht+bula_stay*poly(alter_2020,2)*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-             int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-              int.width = 0.8)
-```
-
-```{r}
-
-dd <- lm(lone.2020~geschlecht+bula_stay*alter_2020*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-             int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-              int.width = 0.8)
-```
-
-
-```{r}
-dd <- lmer(phq.2020~geschlecht+bula_stay*alter_2020*tranche +(1|bula), data = rechnen_final_measure)
-
-summary(dd)
-anova(dd)
-
-d <- lm(phq.2020~geschlecht+bula_stay*alter_2020*tranche, data = rechnen_final_measure)
-summary(d)
-anova(d)
-#summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-            int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-
-```{r}
-dd <- lm(wlb.2020~geschlecht+bula_stay*alter_2020*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-             int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-              int.width = 0.8)
-```
-
-
-```{r}
-
-dd <- lm(lifesat~geschlecht+bula_stay*alter_2020*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-             int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = alter_2020, modx = bula_stay, interval = TRUE,
-              int.width = 0.8)
-
-```
-
-
-```{r}
-
-d<-lm(depr.2020~geschlecht+bula_stay*poly(alter_2020,2)*tranche, data = rechnen_final)
-
-summ(d, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(d, pred = alter_2020, modx = bula_stay, interval = TRUE,
-              int.width = 0.8)
-
-interact_plot(d, pred = alter_2020, modx = bula_stay, interval = TRUE,
-              int.width = 0.8, linearity.check = TRUE)
-
-
-```
-
-```{r}
-dd <- lm(lone.2020~alter_2020+geschlecht+depr_cat.2019*tranche, data = rechnen_final)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8, linearity.check = TRUE )
-interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8)
-```
-
-```{r}
-dd <- lm(depr.2020~anx_cat.2019*tranche, data = data5)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(dd, pred = tranche, modx = anx_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-```{r}
-
-dd <- lm(anx.2020~anx_cat.2019*tranche, data = data5)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(dd, pred = tranche, modx = anx_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-```{r}
-
-
-dd <- lm(anx.2020~depr_cat.2019*tranche, data = data5)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(dd, pred = tranche, modx = depr_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-```
-
-```{r}
-dd <- lm(depr.2020~depr.2019*tranche, data = data5)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-
-interact_plot(dd, pred = tranche, modx = depr.2019, interval = TRUE,
-              int.width = 0.8)
-```
-
-
-
-```{r}
-dd <- lm(depr.2020~tranche1*depr_cat1, data = data5)
-
-summ(dd, center = TRUE, confint = TRUE, digits = 3) 
-#interact_plot(dd, pred = tranche1, modx =depr_cat.2019, interval = TRUE,
- #             int.width = 0.8)
-
-#interact_plot(dd, pred = tranche1, modx =depr_cat.2019, interval = TRUE,
- #             int.width = 0.8, linearity.check = TRUE)
-cat_plot(dd, pred = tranche1, modx = depr_cat1, geom="bar", interval = F)
-
-```
-
-
-
-```{r}
-
-model <- glm(depr_cat.2020 ~ depr.2019*tranche, data=data5, family="binomial")
-summ(model)
-
-interact_plot(model, pred = tranche, modx = depr.2019, interval = TRUE,
-              int.width = 0.8)
-```
-
-
-
-```{r}
-model <- glm(depr_cat.2020 ~ geschlecht+poly(alter_2020,2)*bula_stay*tranche, data=rechnen_final, family="binomial")
-summ(model)
-
-interact_plot(model, pred = alter_2020, modx = bula_stay, interval = TRUE,
-              int.width = 0.8)
-
-```
-
-
-
-
-
-```{r}
-
-
-model <- glm(depr_cat.2020 ~ geschlecht + alter_2020+depr.2019*week, data=rechnen_final, family="binomial")
-summ(model)
-
-interact_plot(model, pred = week, modx = depr.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-```{r}
-model <- glm(gad_cat.2020 ~ geschlecht + alter_2020+depr.2019*tranche, data=rechnen_final, family="binomial")
-summ(model)
-
-interact_plot(model, pred = tranche, modx = depr.2019, interval = TRUE,
-              int.width = 0.8)
-
-```
-```{r}
-
-
-model <- glm(phq_cat.2020 ~ geschlecht + alter_2020+phq.2019*tranche, data=rechnen_final, family="binomial")
-summ(model)
-
-interact_plot(model, pred = tranche, modx = phq.2019, interval = TRUE,
-              int.width = 0.8)
-
-
-```
-
-
-```{r}
-
-model <- glm(gad_cat.2020 ~ alter_2020+geschlecht+bula_stay*gad_cat.2019*tranche, data=rechnen_final, family="binomial")
-summ(model)
-
-interact_plot(model, pred = tranche, modx = gad_cat.2019, interval = TRUE,
-              int.width = 0.8)
-
-interact_plot(model, pred = tranche, modx = bula_stay, interval = TRUE,
-              int.width = 0.8)
-```
-
-
-
-
-```{r}
-
-
-
-```
-```
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-
-```{r}
-
-
-
-```
 
